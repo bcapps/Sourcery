@@ -435,8 +435,7 @@ extension Sourcery {
 
 
         let filesThatHadToBeParsed = allResults
-            .filter { $0.changed }
-            .compactMap { $0.result.path }
+            .compactMap { $0.changed ? $0.result.path : nil }
 
         Log.benchmark("\treduce: \(uniqueTypeStart - reduceStart)\n\tcomposer: \(currentTimestamp() - uniqueTypeStart)\n\ttotal: \(currentTimestamp() - startScan)")
         Log.info("Found \(types.count) types in \(allResults.count) files, \(filesThatHadToBeParsed.count) changed from last run.")
