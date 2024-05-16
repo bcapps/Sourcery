@@ -87,8 +87,8 @@ internal struct ParserResultsComposed {
     private mutating func unifyTypes() -> [Type] {
         /// Resolve actual names of extensions, as they could have been done on typealias and note updated child names in uniques if needed
         parsedTypes
-            .filter { $0.isExtension }
             .forEach { (type: Type) in
+                guard type.isExtension else { return }
                 let oldName = type.globalName
 
                 let hasDotInLocalName = type.localName.contains(".") as Bool
