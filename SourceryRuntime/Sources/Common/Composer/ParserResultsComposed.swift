@@ -83,87 +83,92 @@ internal struct ParserResultsComposed {
             rewriteChildren(of: child)
         }
     }
+    
+    private mutating func resolveActualNames(for type: Type) {
+        guard type.isExtension else { return }
+        let oldName = type.globalName
+
+        let hasDotInLocalName = type.localName.contains(".") as Bool
+        if let _ = type.parent, hasDotInLocalName {
+            resolveExtensionOfNestedType(type)
+        }
+
+        if let resolved = resolveGlobalName(for: oldName, containingType: type.parent, unique: typeMap, modules: modules, typealiases: resolvedTypealiases)?.name {
+            var moduleName: String = ""
+            if let module = type.module {
+                moduleName = "\(module)."
+            }
+            type.localName = resolved.replacingOccurrences(of: moduleName, with: "")
+        } else {
+            return
+        }
+
+        // nothing left to do
+        guard oldName != type.globalName else {
+            return
+        }
+        rewriteChildren(of: type)
+    }
+    
+    private mutating func extendWithExtensions(for type: Type) {
+        let inheritedTypes: [[String]] = type.inheritedTypes.compactMap { inheritedName in
+            if let resolvedGlobalName = resolveGlobalName(for: inheritedName, containingType: type.parent, unique: typeMap, modules: modules, typealiases: resolvedTypealiases)?.name {
+                return [resolvedGlobalName]
+            }
+            if let baseType = Composer.findBaseType(for: type, name: inheritedName, typesByName: typeMap) {
+                if let composed = baseType as? ProtocolComposition, let composedTypes = composed.composedTypes {
+                    // ignore inheritedTypes when it is a `ProtocolComposition` and composedType is a protocol
+                    var combinedTypes = composedTypes.map { $0.globalName }
+                    combinedTypes.append(baseType.globalName)
+                    return combinedTypes
+                }
+            }
+            return [inheritedName]
+        }
+        type.inheritedTypes = inheritedTypes.flatMap { $0 }
+        let uniqueType: Type?
+        if let mappedType = typeMap[type.globalName] {
+            // this check will only fail on an extension?
+            uniqueType = mappedType
+        } else if let composedNameType = typeFromComposedName(type.name, modules: modules) {
+            // this can happen for an extension on unknown type, this case should probably be handled by the inferTypeNameFromModules
+            uniqueType = composedNameType
+        } else {
+            uniqueType = inferTypeNameFromModules(from: type.localName, containedInType: type.parent, uniqueTypes: typeMap, modules: modules).flatMap { typeMap[$0] }
+        }
+        guard let current = uniqueType else {
+            assert(type.isExtension, "Type \(type.globalName) should be extension")
+
+            // for unknown types we still store their extensions but mark them as unknown
+            type.isUnknownExtension = true
+            if let existingType = typeMap[type.globalName] {
+                existingType.extend(type)
+                typeMap[type.globalName] = existingType
+            } else {
+                typeMap[type.globalName] = type
+            }
+
+            let inheritanceClause = type.inheritedTypes.isEmpty ? "" :
+                ": \(type.inheritedTypes.joined(separator: ", "))"
+
+            Log.astWarning("Found \"extension \(type.name)\(inheritanceClause)\" of type for which there is no original type declaration information.")
+            return
+        }
+
+        if current == type { return }
+
+        current.extend(type)
+        typeMap[current.globalName] = current
+    }
 
     private mutating func unifyTypes() -> [Type] {
         /// Resolve actual names of extensions, as they could have been done on typealias and note updated child names in uniques if needed
         parsedTypes
             .forEach { (type: Type) in
-                guard type.isExtension else { return }
-                let oldName = type.globalName
-
-                let hasDotInLocalName = type.localName.contains(".") as Bool
-                if let _ = type.parent, hasDotInLocalName {
-                    resolveExtensionOfNestedType(type)
-                }
-
-                if let resolved = resolveGlobalName(for: oldName, containingType: type.parent, unique: typeMap, modules: modules, typealiases: resolvedTypealiases)?.name {
-                    var moduleName: String = ""
-                    if let module = type.module {
-                        moduleName = "\(module)."
-                    }
-                    type.localName = resolved.replacingOccurrences(of: moduleName, with: "")
-                } else {
-                    return
-                }
-
-                // nothing left to do
-                guard oldName != type.globalName else {
-                    return
-                }
-                rewriteChildren(of: type)
+                resolveActualNames(for: type)
+                
+                extendWithExtensions(for: type)
             }
-
-        // extend all types with their extensions
-        parsedTypes.forEach { type in
-            let inheritedTypes: [[String]] = type.inheritedTypes.compactMap { inheritedName in
-                if let resolvedGlobalName = resolveGlobalName(for: inheritedName, containingType: type.parent, unique: typeMap, modules: modules, typealiases: resolvedTypealiases)?.name {
-                    return [resolvedGlobalName]
-                }
-                if let baseType = Composer.findBaseType(for: type, name: inheritedName, typesByName: typeMap) {
-                    if let composed = baseType as? ProtocolComposition, let composedTypes = composed.composedTypes {
-                        // ignore inheritedTypes when it is a `ProtocolComposition` and composedType is a protocol
-                        var combinedTypes = composedTypes.map { $0.globalName }
-                        combinedTypes.append(baseType.globalName)
-                        return combinedTypes
-                    }
-                }
-                return [inheritedName]
-            }
-            type.inheritedTypes = inheritedTypes.flatMap { $0 }
-            let uniqueType: Type?
-            if let mappedType = typeMap[type.globalName] {
-                // this check will only fail on an extension?
-                uniqueType = mappedType
-            } else if let composedNameType = typeFromComposedName(type.name, modules: modules) {
-                // this can happen for an extension on unknown type, this case should probably be handled by the inferTypeNameFromModules
-                uniqueType = composedNameType
-            } else {
-                uniqueType = inferTypeNameFromModules(from: type.localName, containedInType: type.parent, uniqueTypes: typeMap, modules: modules).flatMap { typeMap[$0] }
-            }
-            guard let current = uniqueType else {
-                assert(type.isExtension, "Type \(type.globalName) should be extension")
-
-                // for unknown types we still store their extensions but mark them as unknown
-                type.isUnknownExtension = true
-                if let existingType = typeMap[type.globalName] {
-                    existingType.extend(type)
-                    typeMap[type.globalName] = existingType
-                } else {
-                    typeMap[type.globalName] = type
-                }
-
-                let inheritanceClause = type.inheritedTypes.isEmpty ? "" :
-                    ": \(type.inheritedTypes.joined(separator: ", "))"
-
-                Log.astWarning("Found \"extension \(type.name)\(inheritanceClause)\" of type for which there is no original type declaration information.")
-                return
-            }
-
-            if current == type { return }
-
-            current.extend(type)
-            typeMap[current.globalName] = current
-        }
 
         let values = typeMap.values
         var processed = Set<String>(minimumCapacity: values.count)
