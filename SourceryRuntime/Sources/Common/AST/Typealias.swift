@@ -17,7 +17,7 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
     /// module in which this typealias was declared
     public var module: String? {
         didSet {
-            if let parentName = parent?.name {
+            if let parentName {
                 name = "\(module != nil ? "\(module!)." : "")\(parentName).\(aliasName)"
             } else {
                 name =  "\(module != nil ? "\(module!)." : "")\(aliasName)"
