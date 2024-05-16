@@ -31,16 +31,14 @@ internal struct ParserResultsComposed {
                 type.variables.forEach { $0.definedInType = type }
                 type.methods.forEach { $0.definedInType = type }
                 type.subscripts.forEach { $0.definedInType = type }
-            }
-
-        // map all known types to their names
-        parsedTypes
-            .forEach {
-                guard !$0.isExtension else { return }
-                typeMap[$0.globalName] = $0
-                if let module = $0.module {
+                
+                // map all known types to their names
+                guard !type.isExtension else { return }
+                
+                typeMap[type.globalName] = type
+                if let module = type.module {
                     var typesByModules = modules[module, default: [:]]
-                    typesByModules[$0.name] = $0
+                    typesByModules[type.name] = type
                     modules[module] = typesByModules
                 }
             }
