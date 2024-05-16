@@ -541,10 +541,13 @@ internal struct ParserResultsComposed {
             return type
         }
         
-        for alias in resolvedTypealiases {
+        for alias in resolvedTypealiases.values {
+            let aliasName = alias.name
             /// iteratively replace all typealiases from the resolvedIdentifier to get to the actual type name requested
-            if let range = resolvedIdentifier.range(of: alias.value.name) {
-                resolvedIdentifier = resolvedIdentifier.replacingCharacters(in: range, with: alias.value.typeName.name)
+            if resolvedIdentifier == aliasName {
+                resolvedIdentifier = alias.typeName.name
+            } else if let range = resolvedIdentifier.range(of: aliasName) {
+                resolvedIdentifier = resolvedIdentifier.replacingCharacters(in: range, with: alias.typeName.name)
             }
         }
         // should we cache resolved typenames?
@@ -552,12 +555,12 @@ internal struct ParserResultsComposed {
             // peek into typealiases, if any of them contain the same typeName
             // this is done after the initial attempt in order to prioritise local (recognized) types first
             // before even trying to substitute the requested type with any typealias
-            for alias in resolvedTypealiases {
+            for alias in resolvedTypealiases.values {
                 /// iteratively replace all typealiases from the resolvedIdentifier to get to the actual type name requested,
                 /// ignoring namespacing
-                if resolvedIdentifier == alias.value.aliasName {
-                    resolvedIdentifier = alias.value.typeName.name
-                    typeName.actualTypeName = alias.value.typeName
+                if resolvedIdentifier == alias.aliasName {
+                    resolvedIdentifier = alias.typeName.name
+                    typeName.actualTypeName = alias.typeName
                     break
                 }
             }
