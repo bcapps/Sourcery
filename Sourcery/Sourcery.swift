@@ -344,8 +344,8 @@ extension Sourcery {
         var allResults = [(changed: Bool, result: FileParserResult)]()
 
         let excludeSet = Set(exclude
-            .map { $0.isDirectory ? try? $0.recursiveChildren() : [$0] }
-            .compactMap({ $0 }).flatMap({ $0 }))
+            .compactMap { $0.isDirectory ? try? $0.recursiveChildren() : [$0] }
+            .flatMap({ $0 }))
 
         try from.enumerated().forEach { index, from in
             let fileList = from.isDirectory ? try from.recursiveChildren() : [from]
