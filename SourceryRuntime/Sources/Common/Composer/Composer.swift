@@ -251,9 +251,13 @@ public enum Composer {
             }
             copyTypeRelationships(from: baseType, to: type)
             if let composedType = baseType as? ProtocolComposition {
-                let implements = composedType.composedTypes?.filter({ $0 is SourceryProtocol })
-                implements?.forEach { updateInheritsAndImplements(from: $0, to: type) }
-                if implements?.count == composedType.composedTypes?.count
+                var protocolCount = 0
+                composedType.composedTypes?.forEach { composedType in
+                    guard let sourceryProtocol = composedType as? SourceryProtocol else { return }
+                    updateInheritsAndImplements(from: sourceryProtocol, to: type)
+                    protocolCount += 1
+                }
+                if protocolCount == composedType.composedTypes?.count
                     || composedType.composedTypes == nil
                     || composedType.composedTypes?.isEmpty == true
                 {
