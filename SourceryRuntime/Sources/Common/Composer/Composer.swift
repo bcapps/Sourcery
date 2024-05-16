@@ -198,10 +198,10 @@ public enum Composer {
 
     private static func updateTypeRelationships(types: [Type]) {
         var typesByName = [String: Type]()
+        types.forEach { typesByName[$0.globalName] = $0 }
+
         var processed = [String: Bool]()
         types.forEach { type in
-            typesByName[type.globalName] = type
-            
             if let type = type as? Class, let supertype = type.inheritedTypes.first.flatMap({ typesByName[$0] }) as? Class {
                 type.supertype = supertype
             }
