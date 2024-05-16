@@ -35,8 +35,8 @@ internal struct ParserResultsComposed {
 
         // map all known types to their names
         parsedTypes
-            .filter { !$0.isExtension }
             .forEach {
+                guard !$0.isExtension else { return }
                 typeMap[$0.globalName] = $0
                 if let module = $0.module {
                     var typesByModules = modules[module, default: [:]]
