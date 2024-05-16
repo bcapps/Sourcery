@@ -84,6 +84,7 @@ internal struct ParserResultsComposed {
         }
     }
     
+    /// Resolve actual names of extensions, as they could have been done on typealias and note updated child names in uniques if needed
     private mutating func resolveActualNames(for type: Type) {
         guard type.isExtension else { return }
         let oldName = type.globalName
@@ -162,7 +163,6 @@ internal struct ParserResultsComposed {
     }
 
     private mutating func unifyTypes() -> [Type] {
-        /// Resolve actual names of extensions, as they could have been done on typealias and note updated child names in uniques if needed
         parsedTypes
             .forEach { (type: Type) in
                 resolveActualNames(for: type)
