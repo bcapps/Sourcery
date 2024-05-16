@@ -350,11 +350,9 @@ extension Sourcery {
         try from.enumerated().forEach { index, from in
             let fileList = from.isDirectory ? try from.recursiveChildren() : [from]
             let parserGenerator: [ParserWrapper] = fileList
-                .filter { $0.isSwiftSourceFile }
-                .filter {
-                    return !excludeSet.contains($0)
-                }
-                .map { path in
+                .compactMap { path in
+                    guard path.isSwiftSourceFile && !excludeSet.contains(path) else { return nil }
+                            
                     return (path: path, parse: {
                         let module = modules?[index]
 
