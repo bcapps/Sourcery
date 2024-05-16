@@ -15,7 +15,15 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
     public var type: Type?
 
     /// module in which this typealias was declared
-    public var module: String?
+    public var module: String? {
+        didSet {
+            if let parentName = parent?.name {
+                name = "\(module != nil ? "\(module!)." : "")\(parentName).\(aliasName)"
+            } else {
+                name =  "\(module != nil ? "\(module!)." : "")\(aliasName)"
+            }
+        }
+    }
 
     /// typealias annotations
     public var annotations: Annotations = [:]
@@ -27,6 +35,12 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
     public var parent: Type? {
         didSet {
             parentName = parent?.name
+            
+            if let parentName {
+                name = "\(module != nil ? "\(module!)." : "")\(parentName).\(aliasName)"
+            } else {
+                name = "\(module != nil ? "\(module!)." : "")\(aliasName)"
+            }
         }
     }
 
@@ -35,13 +49,7 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
 
     var parentName: String?
 
-    public var name: String {
-        if let parentName = parent?.name {
-            return "\(module != nil ? "\(module!)." : "")\(parentName).\(aliasName)"
-        } else {
-            return "\(module != nil ? "\(module!)." : "")\(aliasName)"
-        }
-    }
+    public private(set) var name: String
 
     public init(aliasName: String = "", typeName: TypeName, accessLevel: AccessLevel = .internal, parent: Type? = nil, module: String? = nil, annotations: [String: NSObject] = [:], documentation: [String] = []) {
         self.aliasName = aliasName
@@ -52,6 +60,12 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
         self.module = module
         self.annotations = annotations
         self.documentation = documentation
+        
+        if let parentName  {
+            name = "\(module != nil ? "\(module!)." : "")\(parentName).\(aliasName)"
+        } else {
+            name = "\(module != nil ? "\(module!)." : "")\(aliasName)"
+        }
     }
 
     /// :nodoc:
@@ -150,6 +164,7 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
                 fatalError()
              }; self.accessLevel = accessLevel
             self.parentName = aDecoder.decode(forKey: "parentName")
+            self.name = aDecoder.decode(forKey: "name") ?? ""
         }
 
         /// :nodoc:
@@ -163,6 +178,7 @@ public final class Typealias: NSObject, Typed, SourceryModel, Diffable {
             aCoder.encode(self.parent, forKey: "parent")
             aCoder.encode(self.accessLevel, forKey: "accessLevel")
             aCoder.encode(self.parentName, forKey: "parentName")
+            aCoder.encode(self.name, forKey: "name")
         }
 // sourcery:end
 }
