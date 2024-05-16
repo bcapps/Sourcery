@@ -542,9 +542,8 @@ internal struct ParserResultsComposed {
         }
         
         for alias in resolvedTypealiases.values {
-            let aliasName = alias.name
             /// iteratively replace all typealiases from the resolvedIdentifier to get to the actual type name requested
-            if let range = resolvedIdentifier.range(of: aliasName) {
+            if let range = resolvedIdentifier.range(of: alias.name) {
                 resolvedIdentifier = resolvedIdentifier.replacingCharacters(in: range, with: alias.typeName.name)
             }
         }
