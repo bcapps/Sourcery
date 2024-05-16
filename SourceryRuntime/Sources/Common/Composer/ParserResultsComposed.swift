@@ -170,12 +170,12 @@ internal struct ParserResultsComposed {
 
         let values = typeMap.values
         var processed = Set<String>(minimumCapacity: values.count)
-        return typeMap.values.filter({
+        return values.filter {
             let name = $0.globalName
             let wasProcessed = processed.contains(name)
             processed.insert(name)
             return !wasProcessed
-        })
+        }
     }
 
     /// returns typealiases map to their full names, with `resolved` removing intermediate
